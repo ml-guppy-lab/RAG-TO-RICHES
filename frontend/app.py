@@ -53,7 +53,7 @@ def get_dialogue(situation):
             is_last = (i == len(words))
             yield _result_html(partial, movie, context, is_fallback, typing=not is_last)
             if not is_last:
-                time.sleep(0.07)
+                time.sleep(0.18)
 
     except requests.exceptions.ConnectionError:
         yield _error_html("Could not connect to the backend. Make sure the API server is running.")
