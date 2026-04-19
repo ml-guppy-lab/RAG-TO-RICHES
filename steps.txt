@@ -48,11 +48,9 @@ installing llm using ollama
 make sure ollama serve is running in a separate terminal
 .venv/bin/python3 scripts/ragDialogues.py
 
-# Terminal 1 — backend
-.venv/bin/python scripts/origami_backend.py
+to run the api: ./start.sh
+Then open http://127.0.0.1:7860 in your browser.
 
-# Terminal 2 — frontend
-cd frontend && npm run dev
 
 for Render deployment:
 Start command: uvicorn scripts.origami_backend:app --host 0.0.0.0 --port $PORT

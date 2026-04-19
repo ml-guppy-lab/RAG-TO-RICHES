@@ -7,3 +7,7 @@ sentence-transformers
 chromadb
 langchain-huggingface
 langchain-chroma
+fastapi
+uvicorn
+gradio
+requests
