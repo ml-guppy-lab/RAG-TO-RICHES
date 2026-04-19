@@ -1,5 +1,6 @@
 import gradio as gr
 import requests
+import time
 
 API_URL = "http://127.0.0.1:8000/dialogue"
 
@@ -11,13 +12,21 @@ EXAMPLES = [
     "I'm starting over after a big failure",
 ]
 
+LOADING_HTML = '''
+<div style="display:flex;align-items:center;gap:12px;padding:16px 0;color:#aaa;font-style:italic">
+    <div style="width:18px;height:18px;border:2px solid #444;border-top-color:#9b8fcf;border-radius:50%;
+                animation:spin 0.8s linear infinite;flex-shrink:0"></div>
+    <span>🎬 Searching the filmy archives...</span>
+    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+</div>'''
+
 
 def get_dialogue(situation):
     if not situation or not situation.strip():
         yield _error_html("Please describe a situation first.")
         return
 
-    yield '<div style="color:#aaa;font-style:italic;padding:16px 0">🎬 Searching the filmy archives...</div>'
+    yield LOADING_HTML
 
     try:
         response = requests.post(API_URL, json={"situation": situation}, timeout=180)
@@ -37,7 +46,14 @@ def get_dialogue(situation):
             yield _error_html("Couldn't find a matching dialogue. Try describing your situation differently.")
             return
 
-        yield _result_html(dialogue, movie, context, is_fallback)
+        # typewriter effect: stream dialogue word by word
+        words = dialogue.split()
+        for i in range(1, len(words) + 1):
+            partial = " ".join(words[:i])
+            is_last = (i == len(words))
+            yield _result_html(partial, movie, context, is_fallback, typing=not is_last)
+            if not is_last:
+                time.sleep(0.07)
 
     except requests.exceptions.ConnectionError:
         yield _error_html("Could not connect to the backend. Make sure the API server is running.")
@@ -54,7 +70,12 @@ def _error_html(msg):
     </div>'''
 
 
-def _result_html(dialogue, movie, context, is_fallback):
+def _result_html(dialogue, movie, context, is_fallback, typing=False):
+    cursor = '''<span style="display:inline-block;width:2px;height:1em;background:#9b8fcf;
+                             margin-left:4px;vertical-align:middle;
+                             animation:blink 0.7s step-end infinite"></span>
+                <style>@keyframes blink{{0%,100%{{opacity:1}}50%{{opacity:0}}}}</style>''' if typing else ''
+
     warning = ''
     if is_fallback:
         warning = '''
@@ -63,7 +84,7 @@ def _result_html(dialogue, movie, context, is_fallback):
         </div>'''
 
     context_block = ''
-    if context:
+    if context and not typing:
         context_block = f'''
         <div style="margin-top:16px;padding-top:14px;border-top:1px solid #333;color:#aaa;font-size:13px;font-style:italic">
             💬 {context}
@@ -73,13 +94,14 @@ def _result_html(dialogue, movie, context, is_fallback):
     <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid #4a4a8a;border-radius:16px;padding:28px 32px;margin:8px 0;box-shadow:0 4px 24px rgba(0,0,0,0.4)">
         {warning}
         <div style="font-size:22px;font-weight:700;color:#e8e8ff;line-height:1.5;letter-spacing:0.3px">
-            &ldquo;{dialogue}&rdquo;
+            &ldquo;{dialogue}{cursor}&rdquo;
         </div>
         <div style="margin-top:14px;font-size:15px;color:#9b8fcf;font-weight:600;letter-spacing:1px">
             — {movie}
         </div>
         {context_block}
     </div>'''
+
 
 
 with gr.Blocks(title="RAG to Riches", theme=gr.themes.Soft()) as demo:
